@@ -1,89 +1,109 @@
-Apologies for the oversight. Here's the updated README with the license file named `license.txt`:
+# RNA-seq differential expression workflow
 
-# RNA-Seq Data Analysis Repository
+A modular Nextflow DSL2 workflow for paired-end RNA-seq, from raw FASTQ QC to differential expression. It uses FastQC, Trimmomatic, HISAT2, samtools, HTSeq, DESeq2 and edgeR. MultiQC combines QC and alignment reports.
 
-Welcome to the RNA-Seq Data Analysis repository! This repository contains the scripts and documentation for the analysis of RNA sequencing (RNA-Seq) data using various tools such as FastQC, Trimmomatic, MultiQC, HISAT2, HTSeq-Count, and DESeq2. The purpose of this analysis is to gain insights into gene expression patterns and identify differentially expressed genes in the provided RNA-Seq data.
+## Workflow
 
-## Table of Contents
+```mermaid
+flowchart LR
+  A[FASTQ pairs] --> B[FastQC raw]
+  A --> C[Trimmomatic]
+  C --> D[FastQC trimmed]
+  C --> E[HISAT2 alignment]
+  F[Reference FASTA] --> G[HISAT2 index] --> E
+  E --> H[HTSeq counts]
+  I[GTF] --> H
+  H --> J[Count matrix]
+  J --> K[DESeq2]
+  J --> L[edgeR]
+  B --> M[MultiQC]
+  D --> M
+  E --> M
+```
 
-1. [Introduction](#introduction)
-2. [Dependencies](#dependencies)
-3. [Data](#data)
-4. [Analysis Workflow](#analysis-workflow)
-5. [Usage](#usage)
-6. [Results](#results)
-7. [License](#license)
-8. [Contributing](#contributing)
+## Quick start
 
-## Introduction
+Requires Nextflow 24.04 or later and Conda/Mamba, or Docker with Wave enabled.
 
-RNA-Seq is a powerful tool for studying gene expression patterns at the transcriptome level. This repository provides a step-by-step analysis pipeline to process and analyze raw RNA-Seq data. The pipeline involves quality control, read trimming, alignment, read counting, and differential gene expression analysis using popular bioinformatics tools.
+Run the bundled public test data:
 
-## Dependencies
+```bash
+nextflow run . -profile test,conda
+```
 
-Before running the analysis pipeline, make sure you have the following tools and software installed on your system:
+Run your own samples:
 
-- FastQC (version 0.12.0): A quality control tool for high throughput sequence data.
-- Trimmomatic (version 0.32): A tool for trimming and filtering sequencing reads.
-- MultiQC (version 1.14): A tool for aggregating and visualizing results from multiple bioinformatics tools.
-- HISAT2 (version 2.1.0): A fast and sensitive alignment tool for mapping RNA-Seq reads to a reference genome.
-- HTSeq-Count (version 2.0.3): A tool for counting aligned reads in specific genomic features.
-- DESeq2 (version 1.40.2): A powerful R package for differential gene expression analysis.
+```bash
+nextflow run . -profile conda \
+  --input samplesheet.csv \
+  --fasta genome.fa \
+  --gtf genes.gtf \
+  --strandedness reverse \
+  --contrast_reference control \
+  --contrast_target treatment \
+  --outdir results
+```
 
-Make sure to update the versions with the appropriate ones you are using.
+Use `-profile docker` instead of `-profile conda` to run each process in a Wave-built container. The test profile uses small public FASTQ files and reference assets hosted by nf-core/test-datasets.
 
-## Data
+## Samplesheet
 
-The raw RNA-Seq data used in this analysis is not included in this repository. Please ensure you have access to the data and place it in the appropriate input directory before running the pipeline.
+The CSV needs one row per sample and these columns:
 
-## Analysis Workflow
+```csv
+sample,fastq_1,fastq_2,condition
+CTRL_1,/data/ctrl1_R1.fastq.gz,/data/ctrl1_R2.fastq.gz,control
+CTRL_2,/data/ctrl2_R1.fastq.gz,/data/ctrl2_R2.fastq.gz,control
+TREAT_1,/data/trt1_R1.fastq.gz,/data/trt1_R2.fastq.gz,treatment
+TREAT_2,/data/trt2_R1.fastq.gz,/data/trt2_R2.fastq.gz,treatment
+```
 
-The analysis pipeline is divided into several steps:
+FASTQ paths may be local paths or URLs. Sample IDs must match count-matrix columns. The selected reference and target conditions must both be present.
 
-1. **Quality Control**: FastQC is used to assess the quality of the raw sequencing data.
-2. **Read Trimming**: Trimmomatic is employed to remove low-quality bases and adapters from the reads.
-3. **Alignment**: HISAT2 is used to align the processed reads to a reference genome.
-4. **Read Counting**: HTSeq-Count is used to count the number of reads mapped to each gene.
-5. **Differential Expression Analysis**: DESeq2 is used to identify differentially expressed genes between experimental conditions.
+## Configuration
 
-## Usage
+| Parameter | Default | Description |
+|---|---:|---|
+| `--input` | required | Samplesheet CSV |
+| `--fasta` | required | Reference genome FASTA |
+| `--gtf` | required | Gene annotation |
+| `--outdir` | `results` | Output directory |
+| `--adapters` | bundled TruSeq3-PE | Trimmomatic adapter FASTA |
+| `--min_len` | `36` | Minimum read length after trimming |
+| `--strandedness` | `no` | HTSeq mode: `no`, `yes`, or `reverse` |
+| `--gtf_attribute` | `gene_id` | GTF attribute for gene IDs |
+| `--contrast_reference` | `control` | Baseline condition |
+| `--contrast_target` | `treatment` | Condition tested against baseline |
+| `--padj` | `0.05` | Adjusted p-value / FDR threshold |
+| `--lfc` | `1` | Absolute log2 fold-change threshold |
 
-To run the RNA-Seq data analysis pipeline, follow these steps:
+Per-process CPU, memory, and time defaults are in `nextflow.config`. Conda and Docker/Wave profiles are provided. Nextflow writes a report, trace, and timeline under `results/pipeline_info`.
 
-1. Clone this repository to your local machine: `git clone https://github.com/abhijitswain09/NGS-data-analysis.git`
-2. Place the raw RNA-Seq data in the appropriate input directory.
-3. Install the required dependencies listed in the "Dependencies" section.
-4. Execute the preprocessing, mapping, and expression count script: `bash ngs.sh`
-5. The results will be generated in the output directory.
-6. To perform the differential expression analysis, run the `deseq2.R` script using R.
+## Outputs
 
-## Results
+| Directory | Contents |
+|---|---|
+| `fastqc_raw`, `fastqc_trimmed` | FastQC reports |
+| `trimmomatic` | Paired trimmed reads and logs |
+| `hisat2_build` | HISAT2 genome index |
+| `hisat2_align` | Sorted BAMs, indexes, alignment summaries |
+| `htseq_count` | Per-sample gene counts |
+| `merge_counts` | Gene-by-sample count matrix |
+| `deseq2` | All-gene results and significant/up/down tables |
+| `edger` | EdgeR results and diagnostic plots |
+| `multiqc` | Combined HTML report |
 
-The results of the preprocessing, mapping, and expression count steps will be stored in the output directory. This will include various files and plots providing insights into the gene expression patterns.
+## Repository layout
 
-The results of the differential expression analysis will be generated by the `deseq2.R` script and will be stored separately.
+```
+main.nf                 workflow graph
+modules/                one Nextflow process per tool or analysis
+bin/                    count-matrix and differential-analysis scripts
+assets/                 adapter sequence and public test samplesheet
+conf/test.config        small public test profile
+.github/workflows/ci.yml stub and end-to-end CI runs
+```
 
 ## License
 
-This project is licensed under the [MIT License](license.txt).
-
-## Contributing
-
-If you wish to contribute to this project, feel free to open issues, submit pull requests, or suggest improvements. We welcome your contributions!
-
-Thank you for using this RNA-Seq data analysis pipeline. If you have any questions or encounter any issues, please don't hesitate to contact us.
-
-Happy analyzing!
-
-
-## Nextflow workflow
-
-The Nextflow DSL2 workflow runs paired-end read trimming, HISAT2 alignment, and HTSeq counting from a CSV samplesheet. It produces per-sample BAM and count files; the existing DESeq2 analysis remains a separate script.
-
-Install Nextflow and Conda, then run:
-
-```bash
-nextflow run main.nf -profile conda --samplesheet samplesheet.csv --reference genome.fa --annotation genes.gtf --adapters TruSeq3-PE.fa --outdir results
-```
-
-The samplesheet columns are `sample,fastq_1,fastq_2,condition`. Replace the example rows and paths with your data. Tool versions are listed in `environment.yml`; execution resources and output location are configurable in `nextflow.config`.
+MIT. See [licence.txt](licence.txt).
