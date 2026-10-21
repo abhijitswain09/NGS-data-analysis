@@ -36,6 +36,7 @@ jobs:
           auto-activate-base: true
       - run: nextflow run . -profile test,conda --outdir results
       - run: |
+          find results -maxdepth 4 -type f -print
           test -s results/merge_counts/count_matrix.tsv
           test -s results/deseq2/DEGs.tsv
           test -s results/edger/DEGs.tsv
