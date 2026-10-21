@@ -1,0 +1,9 @@
+name: rnaseq-nextflow
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - trimmomatic=0.39
+  - hisat2=2.2.1
+  - samtools=1.21
+  - htseq=2.0.5
