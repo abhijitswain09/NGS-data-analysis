@@ -74,3 +74,16 @@ If you wish to contribute to this project, feel free to open issues, submit pull
 Thank you for using this RNA-Seq data analysis pipeline. If you have any questions or encounter any issues, please don't hesitate to contact us.
 
 Happy analyzing!
+
+
+## Nextflow workflow
+
+The Nextflow DSL2 workflow runs paired-end read trimming, HISAT2 alignment, and HTSeq counting from a CSV samplesheet. It produces per-sample BAM and count files; the existing DESeq2 analysis remains a separate script.
+
+Install Nextflow and Conda, then run:
+
+```bash
+nextflow run main.nf -profile conda --samplesheet samplesheet.csv --reference genome.fa --annotation genes.gtf --adapters TruSeq3-PE.fa --outdir results
+```
+
+The samplesheet columns are `sample,fastq_1,fastq_2,condition`. Replace the example rows and paths with your data. Tool versions are listed in `environment.yml`; execution resources and output location are configurable in `nextflow.config`.
