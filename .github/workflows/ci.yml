@@ -38,5 +38,6 @@ jobs:
       - run: |
           test -s results/merge_counts/count_matrix.tsv
           test -s results/deseq2/DEGs.tsv
+          test -s results/edger/DEGs.tsv
           test -s results/multiqc/multiqc_report.html
           test -s results/pipeline_info/report.html
