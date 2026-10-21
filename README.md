@@ -87,3 +87,22 @@ nextflow run main.nf -profile conda --samplesheet samplesheet.csv --reference ge
 ```
 
 The samplesheet columns are `sample,fastq_1,fastq_2,condition`. Replace the example rows and paths with your data. Tool versions are listed in `environment.yml`; execution resources and output location are configurable in `nextflow.config`.
+
+
+## Nextflow workflow
+
+The modular DSL2 workflow runs FastQC, adapter and quality trimming, HISAT2 alignment, HTSeq gene counts, count-matrix generation, DESeq2 and edgeR differential expression, then MultiQC. Raw scripts remain available for reference.
+
+Try the bundled public test dataset:
+
+```bash
+nextflow run . -profile test,conda
+```
+
+Run with your own paired-end data:
+
+```bash
+nextflow run . -profile conda --input samplesheet.csv --fasta genome.fa --gtf genes.gtf --strandedness reverse --outdir results
+```
+
+The samplesheet requires `sample,fastq_1,fastq_2,condition`. Set `--contrast_reference` and `--contrast_target` to match condition values. `--adapters`, `--min_len`, `--gtf_attribute`, `--padj`, and `--lfc` are configurable. Conda and Docker/Wave profiles are provided, along with workflow timeline, report, and trace outputs.
