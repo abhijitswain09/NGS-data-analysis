@@ -8,6 +8,7 @@ include { HISAT2_ALIGN } from './modules/hisat2_align'
 include { HTSEQ_COUNT } from './modules/htseq_count'
 include { MERGE_COUNTS } from './modules/merge_counts'
 include { DESEQ2 } from './modules/deseq2'
+include { EDGER } from './modules/edger'
 include { MULTIQC } from './modules/multiqc'
 workflow {
     if (!params.input) error "Missing --input samplesheet CSV"
@@ -33,6 +34,7 @@ workflow {
     count_files = HTSEQ_COUNT.out.counts.map { meta, counts -> counts }.collect()
     MERGE_COUNTS(count_files)
     DESEQ2(MERGE_COUNTS.out.matrix, samplesheet, file("${projectDir}/bin/deseq2.R"))
+    EDGER(MERGE_COUNTS.out.matrix, samplesheet, file("${projectDir}/bin/edger.R"))
     qc = FASTQC_RAW.out.reports.mix(FASTQC_TRIMMED.out.reports)
         .mix(TRIMMOMATIC.out.log).mix(HISAT2_ALIGN.out.log).collect()
     MULTIQC(qc)
