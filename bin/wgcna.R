@@ -49,7 +49,7 @@ module_trait <- data.frame(module = rep(rownames(module_trait_cor), ncol(module_
 dir.create(args[3], recursive = TRUE, showWarnings = FALSE)
 write.csv(module_table, file.path(args[3], "module_membership.csv"), row.names = FALSE)
 write.table(module_trait, file.path(args[3], "module_trait_correlations.tsv"),
-  sep = "\\t", quote = FALSE, row.names = FALSE)
+  sep = "\t", quote = FALSE, row.names = FALSE)
 saveRDS(list(network = net, soft_threshold = sft, expression = datExpr, module_trait = module_trait),
   file.path(args[3], "wgcna_network.rds"))
 pdf(file.path(args[3], "soft_threshold.pdf"), width = 9, height = 5)

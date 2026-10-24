@@ -30,7 +30,7 @@ terms <- lapply(blocks, function(x) {
 term_table <- do.call(rbind, terms)
 if (is.null(term_table) || !nrow(term_table)) stop("Could not parse GO terms from the ontology file")
 
-gaf <- read.delim(gzfile(args[3]), header = FALSE, sep = "\\t", comment.char = "!", quote = "", fill = TRUE, stringsAsFactors = FALSE)
+gaf <- read.delim(gzfile(args[3]), header = FALSE, sep = "\t", comment.char = "!", quote = "", fill = TRUE, stringsAsFactors = FALSE)
 if (ncol(gaf) < 9) stop("GO annotation file is not a valid GAF with at least 9 columns")
 gaf <- gaf[!grepl("(^|\\|)NOT(\\||$)", gaf[[4]]) & gaf[[5]] %in% term_table$go_id, c(3, 5)]
 names(gaf) <- c("gene_name", "go_id")
@@ -52,12 +52,13 @@ ranked <- results$stat
 names(ranked) <- results$gene_name
 ranked <- sort(ranked, decreasing = TRUE)
 
-background <- unique(results$gene_name)
+annotations <- annotations[annotations$gene_name %in% unique(results$gene_name), ]
+background <- unique(annotations$gene_name)
 degs <- unique(results$gene_name[
   !is.na(results$padj) & results$padj <= as.numeric(args[6]) &
-    abs(results$log2FoldChange) >= as.numeric(args[7])
+    abs(results$log2FoldChange) >= as.numeric(args[7]) &
+    results$gene_name %in% background
 ])
-annotations <- annotations[annotations$gene_name %in% background, ]
 pathways <- lapply(split(annotations$gene_name, annotations$go_id), unique)
 pathways <- pathways[lengths(pathways) >= 10 & lengths(pathways) <= 500]
 if (!length(pathways)) stop("No GO sets of size 10-500 overlap the ranked gene universe")
@@ -90,8 +91,8 @@ if (nrow(gsea)) {
 }
 
 dir.create(args[5], recursive = TRUE, showWarnings = FALSE)
-write.table(ora, file.path(args[5], "GO_ORA.tsv"), sep = "\\t", quote = FALSE, row.names = FALSE)
-write.table(gsea, file.path(args[5], "GO_GSEA.tsv"), sep = "\\t", quote = FALSE, row.names = FALSE)
+write.table(ora, file.path(args[5], "GO_ORA.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(gsea, file.path(args[5], "GO_GSEA.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
 if (nrow(ora)) {
   pdf(file.path(args[5], "GO_ORA_top_terms.pdf"), width = 10, height = 7)
   top <- head(ora[!is.na(ora$padj), ], 20)
