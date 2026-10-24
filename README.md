@@ -23,28 +23,28 @@ flowchart LR
 
 ## Quick start
 
-Requires Nextflow 24.04 or later and Conda/Mamba, or Docker with Wave enabled.
+Requires Nextflow 24.04 or later, Docker, and an internet connection. The Docker profile uses Nextflow Wave to build and supply containers from the pinned Conda environments.
 
-Run the bundled public test data:
+Run the bundled public test data from a local clone:
 
 ```bash
-nextflow run . -profile test,conda
+nextflow run . -profile test,docker
 ```
 
-Run your own samples:
+Run the workflow directly from GitHub with your own samples:
 
 ```bash
-nextflow run . -profile conda \
+nextflow run abhijitswain09/NGS-data-analysis -profile docker \
   --input samplesheet.csv \
   --fasta genome.fa \
   --gtf genes.gtf \
   --strandedness reverse \
-  --contrast_reference control \
-  --contrast_target treatment \
   --outdir results
 ```
 
-Use `-profile docker` instead of `-profile conda` to run each process in a Wave-built container. The test profile uses small public FASTQ files and reference assets hosted by nf-core/test-datasets.
+The default contrast compares `treatment` against `control`. Set `--contrast_reference` and `--contrast_target` if your condition names differ. For this example, the samplesheet must contain both `control` and `treatment` in its `condition` column.
+
+To run from a local checkout, replace the repository name with `.`. The alternative `-profile conda` needs Conda or Mamba installed. Test inputs are small public FASTQ files and reference assets hosted by nf-core/test-datasets.
 
 ## Samplesheet
 
