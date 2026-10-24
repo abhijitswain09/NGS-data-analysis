@@ -1,4 +1,4 @@
-# RNA-seq differential expression workflow
+# RNA-seq workflow
 
 A modular Nextflow DSL2 workflow for paired-end RNA-seq, from raw FASTQ QC to differential expression. It uses FastQC, Trimmomatic, HISAT2, samtools, HTSeq, DESeq2 and edgeR. MultiQC combines QC and alignment reports.
 
