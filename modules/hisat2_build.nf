@@ -9,7 +9,7 @@ process HISAT2_BUILD {
     script:
     """
     mkdir hisat2_index
-    hisat2-build -p ${task.cpus} ${fasta} hisat2_index/genome
+    hisat2-build -p ${task.cpus} "${fasta}" hisat2_index/genome
     """
     stub:
     """mkdir hisat2_index && touch hisat2_index/genome.1.ht2"""

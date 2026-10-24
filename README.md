@@ -52,6 +52,8 @@ TREAT_1,/data/trt1_R1.fastq.gz,/data/trt1_R2.fastq.gz,treatment
 TREAT_2,/data/trt2_R1.fastq.gz,/data/trt2_R2.fastq.gz,treatment
 ```
 
+Sample IDs must be unique and use letters, numbers, dots, underscores, or hyphens. Condition labels use the same characters. The selected reference and target conditions must each have at least two samples. `fastq_1` and `fastq_2` must both point to readable files.
+
 ## FlowViewer (optional)
 
 [FlowViewer](https://github.com/abhijitswain09/flow-viewer) gives a live process graph and run view. Start its self-hosted service from a directory where you want its database stored:

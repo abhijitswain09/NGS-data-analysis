@@ -9,7 +9,7 @@ process HTSEQ_COUNT {
     tuple val(meta), path("${meta.id}.counts.txt"), emit: counts
     script:
     """
-    htseq-count -f bam -r pos -s ${params.strandedness} -t exon -i ${params.gtf_attribute} ${bam} ${gtf} > ${meta.id}.counts.txt
+    htseq-count -f bam -r pos -s ${params.strandedness} -t exon -i ${params.gtf_attribute} "${bam}" "${gtf}" > "${meta.id}.counts.txt"
     """
     stub:
     """printf 'GENE_A\\t10\\nGENE_B\\t20\\n__no_feature\\t5\\n' > ${meta.id}.counts.txt"""
