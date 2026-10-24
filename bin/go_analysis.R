@@ -61,7 +61,7 @@ degs <- unique(results$gene_name[
 ])
 pathways <- lapply(split(annotations$gene_name, annotations$go_id), unique)
 pathways <- pathways[lengths(pathways) >= 10 & lengths(pathways) <= 500]
-if (!length(pathways)) stop("No GO sets of size 10-500 overlap the ranked gene universe")
+if (!length(pathways)) warning("No GO sets of size 10-500 overlap the tested genes; writing empty enrichment tables")
 
 ora_rows <- lapply(names(pathways), function(go_id) {
   term_genes <- intersect(pathways[[go_id]], background)
@@ -80,7 +80,11 @@ ora <- merge(ora, term_table, by = "go_id", all.x = TRUE)
 ora <- ora[order(ora$padj), ]
 
 suppressPackageStartupMessages(library(fgsea))
-gsea <- as.data.frame(fgsea(pathways = pathways, stats = ranked, minSize = 10, maxSize = 500, scoreType = "std"))
+gsea <- if (length(pathways)) {
+  as.data.frame(fgsea(pathways = pathways, stats = ranked, minSize = 10, maxSize = 500, scoreType = "std"))
+} else {
+  data.frame(go_id = character(), pathway = character(), pval = numeric(), padj = numeric(), NES = numeric(), size = integer())
+}
 if (nrow(gsea)) {
   gsea$leadingEdge <- vapply(gsea$leadingEdge, paste, collapse = ",", character(1))
   names(gsea)[names(gsea) == "pathway"] <- "go_id"
