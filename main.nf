@@ -45,8 +45,7 @@ workflow {
 
     if (!params.skip_go) {
         GO_ANNOTATIONS()
-        all_genes = DESEQ2.out.results.flatten().filter { result -> result.name == 'all_genes.tsv' }
-        GO_ANALYSIS(all_genes, gtf, GO_ANNOTATIONS.out.gaf, GO_ANNOTATIONS.out.obo,
+        GO_ANALYSIS(DESEQ2.out.all_genes, gtf, GO_ANNOTATIONS.out.gaf, GO_ANNOTATIONS.out.obo,
                     file("${projectDir}/bin/go_analysis.R"))
     }
     if (params.run_wgcna) {

@@ -8,14 +8,16 @@ process GO_ANALYSIS {
     path obo
     path script
     output:
-    path 'go_analysis/*', emit: results
+    path 'GO_ORA.tsv', emit: ora
+    path 'GO_GSEA.tsv', emit: gsea
+    path 'GO_ORA_top_terms.pdf', optional: true
+    path 'GO_GSEA_top_terms.pdf', optional: true
     script:
     """
-    Rscript "$script" "$all_genes" "$gtf" "$gaf" "$obo" go_analysis "$params.padj" "$params.lfc"
+    Rscript "$script" "$all_genes" "$gtf" "$gaf" "$obo" . "$params.padj" "$params.lfc"
     """
     stub:
     """
-    mkdir -p go_analysis
-    touch go_analysis/GO_ORA.tsv go_analysis/GO_GSEA.tsv
+    touch GO_ORA.tsv GO_GSEA.tsv
     """
 }

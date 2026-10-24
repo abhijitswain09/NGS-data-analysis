@@ -6,14 +6,17 @@ process WGCNA {
     path samplesheet
     path script
     output:
-    path 'wgcna/*', emit: results
+    path 'module_membership.csv'
+    path 'module_trait_correlations.tsv'
+    path 'wgcna_network.rds'
+    path 'soft_threshold.pdf', optional: true
+    path 'module_dendrogram.pdf', optional: true
     script:
     """
-    Rscript "$script" "$counts" "$samplesheet" wgcna
+    Rscript "$script" "$counts" "$samplesheet" .
     """
     stub:
     """
-    mkdir -p wgcna
-    touch wgcna/module_membership.csv wgcna/wgcna_network.rds
+    touch module_membership.csv module_trait_correlations.tsv wgcna_network.rds
     """
 }
