@@ -10,6 +10,10 @@ include { MERGE_COUNTS } from './modules/merge_counts'
 include { DESEQ2 } from './modules/deseq2'
 include { EDGER } from './modules/edger'
 include { MULTIQC } from './modules/multiqc'
+include { GO_ANNOTATIONS } from './modules/go_annotations'
+include { GO_ANALYSIS } from './modules/go_analysis'
+include { WGCNA } from './modules/wgcna'
+
 workflow {
     if (!params.input) error "Missing --input samplesheet CSV"
     if (!params.fasta) error "Missing --fasta genome FASTA"
@@ -38,4 +42,13 @@ workflow {
     qc = FASTQC_RAW.out.reports.mix(FASTQC_TRIMMED.out.reports)
         .mix(TRIMMOMATIC.out.log).mix(HISAT2_ALIGN.out.log).collect()
     MULTIQC(qc)
+
+    if (!params.skip_go) {
+        GO_ANNOTATIONS()
+        GO_ANALYSIS(DESEQ2.out.all_genes, gtf, GO_ANNOTATIONS.out.gaf, GO_ANNOTATIONS.out.obo,
+                    file("${projectDir}/bin/go_analysis.R"))
+    }
+    if (params.run_wgcna) {
+        WGCNA(MERGE_COUNTS.out.matrix, samplesheet, file("${projectDir}/bin/wgcna.R"))
+    }
 }

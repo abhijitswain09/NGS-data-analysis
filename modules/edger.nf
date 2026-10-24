@@ -6,11 +6,17 @@ process EDGER {
     path samplesheet
     path script
     output:
-    path 'edger/*', emit: results
+    path 'all_genes.tsv', emit: results
+    path 'DEGs.tsv'
+    path 'DEGs_up.tsv'
+    path 'DEGs_down.tsv'
+    path 'edger_plots.pdf', optional: true, emit: plots
     script:
     """
-    FDR=${params.padj} LFC=${params.lfc} Rscript ${script} ${counts} ${samplesheet} edger ${params.contrast_reference} ${params.contrast_target}
+    FDR=$params.padj LFC=$params.lfc Rscript "$script" "$counts" "$samplesheet" . "$params.contrast_reference" "$params.contrast_target"
     """
     stub:
-    """mkdir -p edger && touch edger/DEGs.tsv edger/all_genes.tsv edger/edger_plots.pdf"""
+    """
+    touch DEGs.tsv DEGs_up.tsv DEGs_down.tsv all_genes.tsv edger_plots.pdf
+    """
 }

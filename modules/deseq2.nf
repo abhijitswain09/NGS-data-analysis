@@ -6,11 +6,16 @@ process DESEQ2 {
     path samplesheet
     path script
     output:
-    path 'deseq2/*', emit: results
+    path 'all_genes.tsv', emit: all_genes
+    path 'DEGs.tsv', emit: degs
+    path 'DEGs_up.tsv'
+    path 'DEGs_down.tsv'
     script:
     """
-    PADJ=${params.padj} LFC=${params.lfc} Rscript ${script} ${counts} ${samplesheet} deseq2 ${params.contrast_reference} ${params.contrast_target}
+    PADJ=$params.padj LFC=$params.lfc Rscript "$script" "$counts" "$samplesheet" . "$params.contrast_reference" "$params.contrast_target"
     """
     stub:
-    """mkdir -p deseq2 && touch deseq2/DEGs.tsv deseq2/all_genes.tsv"""
+    """
+    touch DEGs.tsv DEGs_up.tsv DEGs_down.tsv all_genes.tsv
+    """
 }

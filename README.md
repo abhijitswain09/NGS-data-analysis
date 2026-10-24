@@ -1,37 +1,29 @@
-# RNA-seq workflow
+# RNA-seq analysis with Nextflow
 
-A modular Nextflow DSL2 workflow for paired-end RNA-seq, from raw FASTQ QC to differential expression. It uses FastQC, Trimmomatic, HISAT2, samtools, HTSeq, DESeq2 and edgeR. MultiQC combines QC and alignment reports.
+A modular Nextflow DSL2 workflow for paired-end RNA-seq: read QC, trimming, alignment, gene counts, differential expression, GO enrichment, and optional WGCNA co-expression modules.
 
 ## Workflow
 
 ```mermaid
 flowchart LR
   A[FASTQ pairs] --> B[FastQC raw]
-  A --> C[Trimmomatic]
-  C --> D[FastQC trimmed]
+  A --> C[Trimmomatic] --> D[FastQC trimmed]
   C --> E[HISAT2 alignment]
   F[Reference FASTA] --> G[HISAT2 index] --> E
   E --> H[HTSeq counts]
   I[GTF] --> H
   H --> J[Count matrix]
-  J --> K[DESeq2]
+  J --> K[DESeq2] --> M[GO over-representation and GSEA]
   J --> L[edgeR]
-  B --> M[MultiQC]
-  D --> M
-  E --> M
+  J -. optional .-> N[WGCNA modules]
+  B --> O[MultiQC]
+  D --> O
+  E --> O
 ```
 
 ## Quick start
 
-Requires Nextflow 24.04 or later, Docker, and an internet connection. The Docker profile uses Nextflow Wave to build and supply containers from the pinned Conda environments.
-
-Run the bundled public test data from a local clone:
-
-```bash
-nextflow run . -profile test,docker
-```
-
-Run the workflow directly from GitHub with your own samples:
+Requires Nextflow 24.04 or later and Docker. The Docker profile uses Nextflow Wave to build process containers from the pinned Conda environments. GO/GSEA downloads the latest human GAF and GO ontology from the [Gene Ontology Consortium](https://geneontology.org/docs/download-go-annotations/).
 
 ```bash
 nextflow run abhijitswain09/NGS-data-analysis -profile docker \
@@ -42,13 +34,15 @@ nextflow run abhijitswain09/NGS-data-analysis -profile docker \
   --outdir results
 ```
 
-The default contrast compares `treatment` against `control`. Set `--contrast_reference` and `--contrast_target` if your condition names differ. For this example, the samplesheet must contain both `control` and `treatment` in its `condition` column.
+The default contrast compares `treatment` against `control`. For other condition labels, set `--contrast_reference` and `--contrast_target`. The default GO annotations are human. To use another organism, select its current GAF from the [GO annotation downloads](https://geneontology.org/docs/download-go-annotations/downloads/) and pass its URL with `--go_annotation_url`. The GTF must include `gene_id` and `gene_name` attributes that match the annotation symbols.
 
-To run from a local checkout, replace the repository name with `.`. The alternative `-profile conda` needs Conda or Mamba installed. Test inputs are small public FASTQ files and reference assets hosted by nf-core/test-datasets.
+To skip the internet-dependent GO/GSEA stage, add `--skip_go true`. The optional WGCNA stage needs at least 15 samples and can be enabled with `--run_wgcna true`.
+
+For a local clone, replace the repository name with `.`. The alternative `-profile conda` requires Conda or Mamba.
 
 ## Samplesheet
 
-The CSV needs one row per sample and these columns:
+One row per sample; paired-end FASTQ paths can be local paths or URLs:
 
 ```csv
 sample,fastq_1,fastq_2,condition
@@ -58,9 +52,28 @@ TREAT_1,/data/trt1_R1.fastq.gz,/data/trt1_R2.fastq.gz,treatment
 TREAT_2,/data/trt2_R1.fastq.gz,/data/trt2_R2.fastq.gz,treatment
 ```
 
-FASTQ paths may be local paths or URLs. Sample IDs must match count-matrix columns. The selected reference and target conditions must both be present.
+## FlowViewer (optional)
 
-## Configuration
+[FlowViewer](https://github.com/abhijitswain09/flow-viewer) gives a live process graph and run view. Start its self-hosted service from a directory where you want its database stored:
+
+```bash
+mkdir -p "$PWD/.flow-viewer-data"
+docker run -d --name flow-viewer -p 3000:3000 \
+  -v "$PWD/.flow-viewer-data:/data" flow-viewer
+```
+
+In another terminal, enable the optional plugin configuration when launching the workflow:
+
+```bash
+nextflow run abhijitswain09/NGS-data-analysis -profile docker \
+  -c conf/flowviewer.config \
+  --input samplesheet.csv --fasta genome.fa --gtf genes.gtf \
+  --strandedness reverse --outdir results
+```
+
+Open [http://localhost:3000](http://localhost:3000). The plugin requires Nextflow 25.10 or later. Set `FLOWVIEWER_URL` if the viewer runs on another host. The plugin reports workflow telemetry to that configured FlowViewer server; keep the server under your control.
+
+## Parameters
 
 | Parameter | Default | Description |
 |---|---:|---|
@@ -69,15 +82,17 @@ FASTQ paths may be local paths or URLs. Sample IDs must match count-matrix colum
 | `--gtf` | required | Gene annotation |
 | `--outdir` | `results` | Output directory |
 | `--adapters` | bundled TruSeq3-PE | Trimmomatic adapter FASTA |
-| `--min_len` | `36` | Minimum read length after trimming |
+| `--min_len` | `36` | Minimum trimmed read length |
 | `--strandedness` | `no` | HTSeq mode: `no`, `yes`, or `reverse` |
-| `--gtf_attribute` | `gene_id` | GTF attribute for gene IDs |
+| `--gtf_attribute` | `gene_id` | GTF attribute used for counting |
 | `--contrast_reference` | `control` | Baseline condition |
 | `--contrast_target` | `treatment` | Condition tested against baseline |
 | `--padj` | `0.05` | Adjusted p-value / FDR threshold |
-| `--lfc` | `1` | Absolute log2 fold-change threshold |
-
-Per-process CPU, memory, and time defaults are in `nextflow.config`. Conda and Docker/Wave profiles are provided. Nextflow writes a report, trace, and timeline under `results/pipeline_info`.
+| `--lfc` | `1` | Minimum absolute log2 fold change |
+| `--skip_go` | `false` | Skip GO over-representation and GSEA |
+| `--go_annotation_url` | current human GAF | Organism-specific GO GAF download URL |
+| `--go_obo_url` | current GO ontology | GO ontology OBO download URL |
+| `--run_wgcna` | `false` | Run WGCNA on DESeq2 variance-stabilized counts |
 
 ## Outputs
 
@@ -89,20 +104,16 @@ Per-process CPU, memory, and time defaults are in `nextflow.config`. Conda and D
 | `hisat2_align` | Sorted BAMs, indexes, alignment summaries |
 | `htseq_count` | Per-sample gene counts |
 | `merge_counts` | Gene-by-sample count matrix |
-| `deseq2` | All-gene results and significant/up/down tables |
-| `edger` | EdgeR results and diagnostic plots |
-| `multiqc` | Combined HTML report |
+| `deseq2`, `edger` | Differential expression tables |
+| `go_analysis` | GO over-representation and fgsea tables and plots |
+| `wgcna` (optional) | Module membership, module-trait correlations, plots, and RDS network |
+| `multiqc` | Combined QC and alignment report |
 
-## Repository layout
+GO uses the current GAF/OBO versions at run time; retain the downloaded files and their GAF header with published analyses to record annotation provenance. The enrichment maps GTF `gene_name` values to GO GAF symbols and uses DESeq2's full tested gene set as its background. GSEA ranks genes by the DESeq2 Wald statistic.
 
-```
-main.nf                 workflow graph
-modules/                one Nextflow process per tool or analysis
-bin/                    count-matrix and differential-analysis scripts
-assets/                 adapter sequence and public test samplesheet
-conf/test.config        small public test profile
-.github/workflows/ci.yml stub and end-to-end CI runs
-```
+## Co-expression model
+
+The optional WGCNA stage adapts the [co-expression network repository](https://github.com/abhijitswain09/Construction-of-co-expression-network) to the pipeline count matrix and samplesheet. It filters low-count genes, applies DESeq2 variance-stabilizing transformation, selects a soft-threshold power, detects modules, and reports module-trait associations. WGCNA results are sensitive to cohort size and design; the stage stops when fewer than 15 samples are supplied.
 
 ## License
 
