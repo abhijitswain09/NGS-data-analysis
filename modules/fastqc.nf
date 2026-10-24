@@ -7,7 +7,7 @@ process FASTQC {
     output:
     path '*_fastqc.{zip,html}', emit: reports
     script:
-    """fastqc --threads ${task.cpus} --quiet ${reads}"""
+    """fastqc --threads ${task.cpus} --quiet "${reads[0]}" "${reads[1]}""""
     stub:
     """touch ${reads[0].simpleName}_fastqc.zip ${reads[0].simpleName}_fastqc.html"""
 }

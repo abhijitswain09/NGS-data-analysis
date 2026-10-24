@@ -19,11 +19,44 @@ workflow {
     if (!params.fasta) error "Missing --fasta genome FASTA"
     if (!params.gtf) error "Missing --gtf annotation GTF"
     samplesheet = file(params.input, checkIfExists: true)
-    ch_reads = channel.fromPath(samplesheet).splitCsv(header: true, strip: true).map { row ->
-        if (!row.sample || !row.fastq_1 || !row.fastq_2 || !row.condition)
-            error "Samplesheet rows need sample, fastq_1, fastq_2, and condition"
-        tuple([id: row.sample, condition: row.condition],
-              [file(row.fastq_1, checkIfExists: true), file(row.fastq_2, checkIfExists: true)])
+    required_columns = ['sample', 'fastq_1', 'fastq_2', 'condition']
+    if (!(params.strandedness in ['no', 'yes', 'reverse']))
+        error "--strandedness must be one of: no, yes, reverse"
+    if (!(params.gtf_attribute ==~ /[A-Za-z_][A-Za-z0-9_]*/))
+        error "--gtf_attribute must be a valid GTF attribute name"
+    if (!(params.contrast_reference ==~ /[A-Za-z0-9][A-Za-z0-9._-]*/) ||
+        !(params.contrast_target ==~ /[A-Za-z0-9][A-Za-z0-9._-]*/) ||
+        params.contrast_reference == params.contrast_target)
+        error "Contrast labels must be distinct and contain only letters, numbers, dot, underscore, or hyphen"
+    try {
+        if (params.min_len.toInteger() < 1) error "--min_len must be a positive integer"
+        if (!(params.padj.toBigDecimal() > 0 && params.padj.toBigDecimal() <= 1))
+            error "--padj must be greater than 0 and at most 1"
+        if (params.lfc.toBigDecimal() < 0) error "--lfc must be non-negative"
+    } catch (NumberFormatException e) {
+        error "--min_len, --padj, and --lfc must be numeric (min_len must be an integer)"
+    }
+    rows_ch = channel.fromPath(samplesheet).splitCsv(header: true, strip: true).collect()
+    ch_reads = rows_ch.flatMap { rows ->
+        if (!rows || !required_columns.every { rows[0].containsKey(it) })
+            error "Samplesheet must contain columns: ${required_columns.join(', ')}"
+        if (rows.any { row -> required_columns.any { !row[it] } })
+            error "Every samplesheet row needs non-empty sample, fastq_1, fastq_2, and condition values"
+        if (rows.any { !(it.sample ==~ /[A-Za-z0-9][A-Za-z0-9._-]*/) || !(it.condition ==~ /[A-Za-z0-9][A-Za-z0-9._-]*/) })
+            error "Sample IDs and condition labels may contain only letters, numbers, dot, underscore, or hyphen, and must start with a letter or number"
+        sample_ids = rows.collect { it.sample }
+        if (sample_ids.toSet().size() != sample_ids.size()) error "Samplesheet sample IDs must be unique"
+        conditions = rows.collect { it.condition }.toSet()
+        if (!(params.contrast_reference in conditions) || !(params.contrast_target in conditions))
+            error "Both contrast conditions must occur in the samplesheet: ${params.contrast_reference}, ${params.contrast_target}"
+        ref_count = rows.count { it.condition == params.contrast_reference }
+        target_count = rows.count { it.condition == params.contrast_target }
+        if (ref_count < 2 || target_count < 2)
+            error "At least two samples are required for each contrast condition"
+        rows.collect { row ->
+            tuple([id: row.sample, condition: row.condition],
+                  [file(row.fastq_1, checkIfExists: true), file(row.fastq_2, checkIfExists: true)])
+        }
     }
     fasta = file(params.fasta, checkIfExists: true)
     gtf = file(params.gtf, checkIfExists: true)

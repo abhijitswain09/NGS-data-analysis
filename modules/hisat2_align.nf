@@ -10,9 +10,9 @@ process HISAT2_ALIGN {
     path "${meta.id}.hisat2.log", emit: log
     script:
     """
-    hisat2 -p ${task.cpus} -x ${index}/genome -1 ${reads[0]} -2 ${reads[1]} \
-      --summary-file ${meta.id}.hisat2.log | samtools sort -@ ${task.cpus} -o ${meta.id}.bam -
-    samtools index ${meta.id}.bam
+    hisat2 -p ${task.cpus} -x "${index}/genome" -1 "${reads[0]}" -2 "${reads[1]}" \
+      --summary-file "${meta.id}.hisat2.log" | samtools sort -@ ${task.cpus} -o "${meta.id}.bam" -
+    samtools index "${meta.id}.bam"
     """
     stub:
     """touch ${meta.id}.bam ${meta.id}.bam.bai ${meta.id}.hisat2.log"""
