@@ -55,8 +55,8 @@ ranked <- sort(ranked, decreasing = TRUE)
 annotations <- annotations[annotations$gene_name %in% unique(results$gene_name), ]
 background <- unique(annotations$gene_name)
 degs <- unique(results$gene_name[
-  !is.na(results$padj) & results$padj <= as.numeric(args[6]) &
-    abs(results$log2FoldChange) >= as.numeric(args[7]) &
+  !is.na(results$padj) & results$padj < as.numeric(args[6]) &
+    abs(results$log2FoldChange) > as.numeric(args[7]) &
     results$gene_name %in% background
 ])
 pathways <- lapply(split(annotations$gene_name, annotations$go_id), unique)

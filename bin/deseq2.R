@@ -5,9 +5,15 @@ if (length(args) < 5) stop("Usage: deseq2.R counts.tsv samplesheet.csv outdir re
 counts <- as.matrix(read.delim(args[1], row.names=1, check.names=FALSE))
 ss <- read.csv(args[2], stringsAsFactors=FALSE)
 ref <- args[4]; target <- args[5]
+if (!all(c("sample", "condition") %in% names(ss))) stop("Samplesheet must contain sample and condition columns")
+if (anyNA(ss$sample) || any(!nzchar(ss$sample)) || anyDuplicated(ss$sample)) stop("Samplesheet sample IDs must be non-empty and unique")
+if (anyDuplicated(colnames(counts)) || !setequal(ss$sample, colnames(counts)))
+  stop("Samplesheet sample IDs must exactly match the count-matrix columns")
+if (!is.numeric(counts) || anyNA(counts) || any(!is.finite(counts)) || any(counts < 0) || any(counts != floor(counts)))
+  stop("Count matrix must contain finite, non-negative integer counts")
 ss <- ss[ss$condition %in% c(ref,target), c("sample","condition")]
 if (!all(c(ref,target) %in% ss$condition)) stop("Both requested conditions must be present in samplesheet")
-if (!all(ss$sample %in% colnames(counts))) stop("Samplesheet sample IDs must match count-matrix columns")
+if (any(table(factor(ss$condition, levels=c(ref,target))) < 2)) stop("At least two samples are required in each contrast condition")
 counts <- counts[,ss$sample,drop=FALSE]
 ss$condition <- relevel(factor(ss$condition), ref=ref)
 rownames(ss) <- ss$sample
